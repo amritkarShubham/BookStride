@@ -69,9 +69,20 @@ export function PdfViewer({ fileUrl, currentPage, onPageChange }: PdfViewerProps
     }
   }, [page, isLoading, renderPage]);
 
-  const goToPage = (p: number) => {
+  const goToPage = useCallback((p: number) => {
     if (p >= 1 && p <= totalPages) setPage(p);
-  };
+  }, [totalPages]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') goToPage(page - 1);
+      if (e.key === 'ArrowRight') goToPage(page + 1);
+      if (e.key === '=' || e.key === '+') setScale((s) => Math.min(3, s + 0.2));
+      if (e.key === '-') setScale((s) => Math.max(0.5, s - 0.2));
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [page, goToPage]);
 
   if (isLoading) {
     return (
@@ -124,12 +135,23 @@ export function PdfViewer({ fileUrl, currentPage, onPageChange }: PdfViewerProps
         </div>
       </div>
 
-      {/* Canvas */}
-      <div className="flex-1 overflow-auto flex justify-center p-4 bg-beige/30">
+      {/* Canvas Container */}
+      <div className="flex-1 overflow-auto relative bg-beige/30 flex justify-center items-start p-4">
         <canvas
           ref={canvasRef}
-          className="shadow-lg rounded-sm max-w-full"
-          style={{ maxHeight: '100%', objectFit: 'contain' }}
+          className="shadow-lg rounded-sm"
+        />
+
+        {/* Mobile Tap Zones for easier page turning */}
+        <button
+          onClick={() => goToPage(page - 1)}
+          className="absolute left-0 top-0 w-1/4 h-full bg-transparent z-10"
+          aria-label="Previous Page"
+        />
+        <button
+          onClick={() => goToPage(page + 1)}
+          className="absolute right-0 top-0 w-1/4 h-full bg-transparent z-10"
+          aria-label="Next Page"
         />
       </div>
     </div>
