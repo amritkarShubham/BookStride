@@ -19,6 +19,16 @@ export function AddManualBook({ isOpen, onClose, onBookAdded }: AddManualBookPro
   const [selectedResult, setSelectedResult] = useState<OpenLibrarySearchResult | null>(null);
   const [dateRead, setDateRead] = useState('');
   const [status, setStatus] = useState<'completed' | 'reading' | 'want-to-read'>('completed');
+  const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleClose = useCallback(() => {
+    setFile(null);
+    setSelectedResult(null);
+    setQuery('');
+    setResults([]);
+    onClose();
+  }, [onClose]);
 
   const handleSearch = useCallback(async () => {
     if (!query.trim()) return;
@@ -30,6 +40,15 @@ export function AddManualBook({ isOpen, onClose, onBookAdded }: AddManualBookPro
 
   const handleAddBook = async () => {
     if (!selectedResult) return;
+    setIsUploading(true);
+
+    let fileBuffer: ArrayBuffer | undefined;
+    let fileType: 'pdf' | 'epub' | null = null;
+
+    if (file) {
+      fileBuffer = await file.arrayBuffer();
+      fileType = file.name.toLowerCase().endsWith('.epub') ? 'epub' : 'pdf';
+    }
 
     const book: Omit<Book, 'id' | 'user_id'> = {
       title: selectedResult.title,
@@ -39,7 +58,7 @@ export function AddManualBook({ isOpen, onClose, onBookAdded }: AddManualBookPro
       currentPage: status === 'completed' ? selectedResult.pageCount || 300 : 0,
       completionPct: status === 'completed' ? 100 : 0,
       status,
-      fileType: null,
+      fileType,
       fileUrl: null,
       description: '',
       genres: [],
@@ -52,11 +71,15 @@ export function AddManualBook({ isOpen, onClose, onBookAdded }: AddManualBookPro
         : null,
     };
 
-    await db.books.add(book);
-    onBookAdded();
-    setSelectedResult(null);
-    setQuery('');
-    setResults([]);
+    try {
+      await db.books.add(book, fileBuffer);
+      onBookAdded();
+      handleClose();
+    } catch (e) {
+      console.error('Failed to add book', e);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -67,7 +90,7 @@ export function AddManualBook({ isOpen, onClose, onBookAdded }: AddManualBookPro
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-beige">
           <h2 className="font-serif text-xl text-ink">Add a Book</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-beige transition-colors">
+          <button onClick={handleClose} disabled={isUploading} className="p-1.5 rounded-lg hover:bg-beige transition-colors disabled:opacity-50">
             <X className="w-4 h-4 text-ink-light" />
           </button>
         </div>
@@ -192,19 +215,43 @@ export function AddManualBook({ isOpen, onClose, onBookAdded }: AddManualBookPro
                 </div>
               )}
 
+              {/* Attach File */}
+              <div className="mb-5">
+                <label className="text-[10px] uppercase tracking-wider text-ink-light mb-2 block">
+                  Attach File (optional)
+                </label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept=".pdf,.epub"
+                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    disabled={isUploading}
+                    className="block w-full text-sm text-ink-light
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-lg file:border-0
+                      file:text-xs file:font-medium
+                      file:bg-beige file:text-ink
+                      hover:file:bg-beige-border transition-colors cursor-pointer disabled:opacity-50"
+                  />
+                </div>
+                <p className="text-[10px] text-ink-light/60 mt-1">Upload a PDF or EPUB to read in the app</p>
+              </div>
+
               <div className="flex gap-3">
                 <button
                   onClick={() => setSelectedResult(null)}
-                  className="px-4 py-2.5 rounded-xl text-sm text-ink-light hover:bg-beige transition-colors"
+                  disabled={isUploading}
+                  className="px-4 py-2.5 rounded-xl text-sm text-ink-light hover:bg-beige transition-colors disabled:opacity-50"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleAddBook}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-forest text-cream text-sm font-medium hover:bg-forest-light transition-colors"
+                  disabled={isUploading}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-forest text-cream text-sm font-medium hover:bg-forest-light transition-colors disabled:opacity-50"
                 >
-                  <Plus className="w-4 h-4" />
-                  Add to Library
+                  {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  {isUploading ? 'Adding...' : 'Add to Library'}
                 </button>
               </div>
             </div>
