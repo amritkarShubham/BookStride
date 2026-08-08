@@ -10,7 +10,26 @@ export const db = {
         .select('*')
         .order('added_at', { ascending: false });
       if (error) throw error;
-      return data as Book[];
+      return (data || []).map(d => ({
+        id: d.id,
+        user_id: d.user_id,
+        title: d.title,
+        author: d.author,
+        coverUrl: d.cover_url,
+        totalPages: d.total_pages,
+        currentPage: d.current_page,
+        completionPct: d.completion_pct,
+        status: d.status,
+        fileType: d.file_type,
+        fileUrl: d.file_url,
+        description: d.description,
+        genres: d.genres || [],
+        publishedYear: d.published_year,
+        isbn: d.isbn,
+        currentChapter: d.current_chapter,
+        addedAt: new Date(d.added_at).getTime(),
+        completedAt: d.completed_at ? new Date(d.completed_at).getTime() : null,
+      })) as Book[];
     },
     async getById(id: string): Promise<Book | null> {
       const supabase = createClient();
@@ -20,7 +39,27 @@ export const db = {
         .eq('id', id)
         .single();
       if (error && error.code !== 'PGRST116') throw error;
-      return data as Book | null;
+      if (!data) return null;
+      return {
+        id: data.id,
+        user_id: data.user_id,
+        title: data.title,
+        author: data.author,
+        coverUrl: data.cover_url,
+        totalPages: data.total_pages,
+        currentPage: data.current_page,
+        completionPct: data.completion_pct,
+        status: data.status,
+        fileType: data.file_type,
+        fileUrl: data.file_url,
+        description: data.description,
+        genres: data.genres || [],
+        publishedYear: data.published_year,
+        isbn: data.isbn,
+        currentChapter: data.current_chapter,
+        addedAt: new Date(data.added_at).getTime(),
+        completedAt: data.completed_at ? new Date(data.completed_at).getTime() : null,
+      } as Book;
     },
     async add(book: Omit<Book, 'id' | 'user_id'>, fileData?: ArrayBuffer): Promise<string> {
       const supabase = createClient();
