@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { X, Pause, Play, BookOpen } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 import { db } from '@/lib/db';
 import { useAppStore } from '@/lib/store';
 import { WpmEngine } from '@/lib/wpm-engine';
@@ -39,6 +40,7 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
   const [elapsed, setElapsed] = useState(0);
   const [currentWpm, setCurrentWpm] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
 
   const wpmEngineRef = useRef(new WpmEngine());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -53,6 +55,25 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
         setBook(b);
         setProgress(b.completionPct);
         startSession(bookId);
+
+        if (b.fileUrl) {
+          // If the bucket is private, we need a signed URL. We can extract the path from the public URL.
+          try {
+            const pathMatch = b.fileUrl.match(/\/books\/(.+)$/);
+            const path = pathMatch ? pathMatch[1] : b.fileUrl;
+            
+            const supabase = createClient();
+            supabase.storage.from('books').createSignedUrl(path, 3600).then(({ data }) => {
+              if (data?.signedUrl) {
+                setSignedUrl(data.signedUrl);
+              } else {
+                setSignedUrl(b.fileUrl!); // fallback
+              }
+            });
+          } catch (e) {
+            setSignedUrl(b.fileUrl!);
+          }
+        }
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -121,6 +142,15 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
   }
 
   const hasFile = book.fileUrl && book.fileType;
+
+  // Don't render viewers until we have the signed URL (if there is a file)
+  if (hasFile && !signedUrl) {
+    return (
+      <div className="fixed inset-0 z-50 bg-cream flex items-center justify-center">
+        <div className="text-ink-light">Preparing document...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-cream flex flex-col">
@@ -216,16 +246,16 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
 
       {/* Reader Content */}
       <div className="flex-1 overflow-hidden">
-        {hasFile ? (
+        {hasFile && signedUrl ? (
           book.fileType === 'pdf' ? (
             <PdfViewer
-              fileUrl={book.fileUrl!}
+              fileUrl={signedUrl}
               currentPage={book.currentPage}
               onPageChange={handlePageChange}
             />
           ) : (
             <EpubViewer
-              fileUrl={book.fileUrl!}
+              fileUrl={signedUrl}
               onPageChange={handlePageChange}
             />
           )
