@@ -100,7 +100,7 @@ export default function Dashboard() {
         // Extract PDF metadata and text
         const [meta, textResult] = await Promise.all([
           extractPdfMetadata(arrayBuffer),
-          extractPdfText(arrayBuffer, 3),
+          extractPdfText(arrayBuffer, 10),
         ]);
         extractedMeta = meta;
         textSnippet = textResult.text;
@@ -111,7 +111,7 @@ export default function Dashboard() {
         // Extract ePub metadata and text
         const [meta, text] = await Promise.all([
           extractEpubMetadata(arrayBuffer),
-          extractEpubText(arrayBuffer, 3),
+          extractEpubText(arrayBuffer, 10),
         ]);
         extractedMeta = meta;
         textSnippet = text;

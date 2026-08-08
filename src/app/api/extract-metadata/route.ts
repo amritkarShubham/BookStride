@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
 
     // If we have a Gemini API key, use AI extraction
-    if (apiKey && textSnippet) {
+    if (apiKey && (textSnippet || pdfMetadata)) {
       try {
         const { GoogleGenerativeAI } = await import('@google/generative-ai');
         const genAI = new GoogleGenerativeAI(apiKey);
