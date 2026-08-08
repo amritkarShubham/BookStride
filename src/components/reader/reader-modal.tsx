@@ -117,20 +117,26 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
 
   // Handle close — save session
   const handleClose = async () => {
-    const engine = wpmEngineRef.current;
-    engine.endCurrentPage();
+    try {
+      const engine = wpmEngineRef.current;
+      engine.endCurrentPage();
 
-    if (book?.id) {
-      await saveSession(book.id, engine, sessionStartRef.current);
+      if (book?.id) {
+        await saveSession(book.id, engine, sessionStartRef.current);
 
-      // Update book progress
-      const totalPages = book.totalPages;
-      const currentPage = Math.round((progress / 100) * totalPages);
-      await updateBookProgress(book.id, currentPage, totalPages);
+        // Update book progress
+        const totalPages = book.totalPages || 0;
+        let currentPage = Math.round((progress / 100) * totalPages);
+        if (isNaN(currentPage)) currentPage = book.currentPage || 0;
+        
+        await updateBookProgress(book.id, currentPage, totalPages);
+      }
+    } catch (error) {
+      console.error('Error saving reading session:', error);
+    } finally {
+      endSession();
+      onClose();
     }
-
-    endSession();
-    onClose();
   };
 
   if (!book) {
