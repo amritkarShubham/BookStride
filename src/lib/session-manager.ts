@@ -69,11 +69,12 @@ async function updateDailyLog(session: ReadingSession): Promise<void> {
 export async function updateBookProgress(
   bookId: string,
   currentPage: number,
-  totalPages: number
+  totalPages: number,
+  explicitPct?: number
 ): Promise<void> {
-  const pct = totalPages > 0
-    ? Math.min(100, parseFloat(((currentPage / totalPages) * 100).toFixed(1)))
-    : 0;
+  const pct = explicitPct !== undefined
+    ? explicitPct
+    : (totalPages > 0 ? Math.min(100, parseFloat(((currentPage / totalPages) * 100).toFixed(1))) : 0);
 
   await db.books.update(bookId, {
     currentPage,

@@ -129,7 +129,7 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
         let currentPage = Math.round((progress / 100) * totalPages);
         if (isNaN(currentPage)) currentPage = book.currentPage || 0;
         
-        await updateBookProgress(book.id, currentPage, totalPages);
+        await updateBookProgress(book.id, currentPage, totalPages, progress);
       }
     } catch (error) {
       console.error('Error saving reading session:', error);
