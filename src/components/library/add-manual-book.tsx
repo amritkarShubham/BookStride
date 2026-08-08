@@ -31,7 +31,7 @@ export function AddManualBook({ isOpen, onClose, onBookAdded }: AddManualBookPro
   const handleAddBook = async () => {
     if (!selectedResult) return;
 
-    const book: Book = {
+    const book: Omit<Book, 'id' | 'user_id'> = {
       title: selectedResult.title,
       author: selectedResult.author,
       coverUrl: selectedResult.coverUrl,
@@ -40,7 +40,7 @@ export function AddManualBook({ isOpen, onClose, onBookAdded }: AddManualBookPro
       completionPct: status === 'completed' ? 100 : 0,
       status,
       fileType: null,
-      fileBlob: null,
+      fileUrl: null,
       description: '',
       genres: [],
       publishedYear: selectedResult.publishYear,

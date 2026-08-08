@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { X, User, Trash2, BookOpen, AlertTriangle } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { db } from '@/lib/db';
+import { createClient } from '@/lib/supabase/client';
 
 interface SettingsModalProps {
   onDataCleared?: () => void;
@@ -26,13 +26,10 @@ export function SettingsModal({ onDataCleared }: SettingsModalProps) {
     }
   };
 
-  const handleClearAllData = async () => {
-    await db.books.clear();
-    await db.sessions.clear();
-    await db.dailyLogs.clear();
-    setShowClearConfirm(false);
-    closeSettings();
-    onDataCleared?.();
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.href = '/login';
   };
 
   return (
@@ -111,21 +108,21 @@ export function SettingsModal({ onDataCleared }: SettingsModalProps) {
               </div>
               <p className="text-xs text-ink-light leading-relaxed">
                 Track your reading speed, build streaks, and visualize your
-                literary journey. All data is stored locally in your browser.
+                literary journey. Your data is synced securely to the cloud.
               </p>
             </div>
           </div>
 
           {/* Danger Zone */}
           <div>
-            <div className="chapter-divider mb-4">Data</div>
+            <div className="chapter-divider mb-4">Account</div>
             {!showClearConfirm ? (
               <button
                 onClick={() => setShowClearConfirm(true)}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-terracotta hover:bg-terracotta/5 transition-colors w-full"
               >
                 <Trash2 className="w-4 h-4" />
-                Clear All Reading Data
+                Sign Out
               </button>
             ) : (
               <div className="bg-terracotta/5 rounded-xl p-4 border border-terracotta/20">
@@ -136,8 +133,7 @@ export function SettingsModal({ onDataCleared }: SettingsModalProps) {
                   </p>
                 </div>
                 <p className="text-xs text-ink-light mb-3">
-                  This will permanently delete all your books, reading sessions,
-                  and progress data. This cannot be undone.
+                  You will need to sign back in to access your library.
                 </p>
                 <div className="flex gap-2">
                   <button
@@ -147,10 +143,10 @@ export function SettingsModal({ onDataCleared }: SettingsModalProps) {
                     Cancel
                   </button>
                   <button
-                    onClick={handleClearAllData}
+                    onClick={handleSignOut}
                     className="flex-1 px-3 py-2 rounded-lg text-sm bg-terracotta text-cream hover:bg-terracotta-dark transition-colors font-medium"
                   >
-                    Delete Everything
+                    Sign Out
                   </button>
                 </div>
               </div>

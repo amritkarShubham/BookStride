@@ -19,7 +19,7 @@ const EpubViewer = dynamic(
 );
 
 interface ReaderModalProps {
-  bookId: number;
+  bookId: string;
   onClose: () => void;
 }
 
@@ -48,7 +48,7 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
 
   // Load book data
   useEffect(() => {
-    db.books.get(bookId).then((b) => {
+    db.books.getById(bookId).then((b) => {
       if (b) {
         setBook(b);
         setProgress(b.completionPct);
@@ -120,7 +120,7 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
     );
   }
 
-  const hasFile = book.fileBlob && book.fileType;
+  const hasFile = book.fileUrl && book.fileType;
 
   return (
     <div className="fixed inset-0 z-50 bg-cream flex flex-col">
@@ -219,13 +219,13 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
         {hasFile ? (
           book.fileType === 'pdf' ? (
             <PdfViewer
-              fileData={book.fileBlob!}
+              fileUrl={book.fileUrl!}
               currentPage={book.currentPage}
               onPageChange={handlePageChange}
             />
           ) : (
             <EpubViewer
-              fileData={book.fileBlob!}
+              fileUrl={book.fileUrl!}
               onPageChange={handlePageChange}
             />
           )

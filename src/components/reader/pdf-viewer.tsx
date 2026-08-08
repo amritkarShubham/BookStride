@@ -4,12 +4,12 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 
 interface PdfViewerProps {
-  fileData: ArrayBuffer;
+  fileUrl: string;
   currentPage: number;
   onPageChange: (page: number, totalPages: number, wordCount: number) => void;
 }
 
-export function PdfViewer({ fileData, currentPage, onPageChange }: PdfViewerProps) {
+export function PdfViewer({ fileUrl, currentPage, onPageChange }: PdfViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [totalPages, setTotalPages] = useState(0);
   const [page, setPage] = useState(currentPage || 1);
@@ -26,7 +26,7 @@ export function PdfViewer({ fileData, currentPage, onPageChange }: PdfViewerProp
       const pdfjs = await import('pdfjs-dist');
       pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
 
-      const pdf = await pdfjs.getDocument({ data: fileData.slice(0) }).promise;
+      const pdf = await pdfjs.getDocument({ url: fileUrl }).promise;
       if (cancelled) return;
 
       pdfDocRef.current = pdf;
@@ -36,7 +36,7 @@ export function PdfViewer({ fileData, currentPage, onPageChange }: PdfViewerProp
 
     loadPdf();
     return () => { cancelled = true; };
-  }, [fileData]);
+  }, [fileUrl]);
 
   // Render current page
   const renderPage = useCallback(async (pageNum: number) => {

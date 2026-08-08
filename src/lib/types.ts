@@ -6,7 +6,8 @@ export type BookStatus = 'reading' | 'completed' | 'want-to-read';
 export type FileType = 'pdf' | 'epub';
 
 export interface Book {
-  id?: number;
+  id?: string;
+  user_id?: string;
   title: string;
   author: string;
   coverUrl: string;
@@ -15,8 +16,8 @@ export interface Book {
   completionPct: number;
   status: BookStatus;
   fileType: FileType | null;
-  /** Stored as ArrayBuffer in IndexedDB for offline access */
-  fileBlob: ArrayBuffer | null;
+  /** URL to the stored file in Supabase Storage */
+  fileUrl: string | null;
   description: string;
   genres: string[];
   publishedYear: number | null;
@@ -27,8 +28,9 @@ export interface Book {
 }
 
 export interface ReadingSession {
-  id?: number;
-  bookId: number;
+  id?: string;
+  user_id?: string;
+  bookId: string;
   startedAt: number;     // timestamp
   endedAt: number | null;
   durationSeconds: number;
@@ -38,7 +40,8 @@ export interface ReadingSession {
 }
 
 export interface DailyLog {
-  id?: number;
+  id?: string;
+  user_id?: string;
   /** ISO date string YYYY-MM-DD */
   date: string;
   totalSeconds: number;

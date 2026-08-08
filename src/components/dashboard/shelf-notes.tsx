@@ -4,7 +4,7 @@ import type { Book } from '@/lib/types';
 
 interface ShelfNotesProps {
   books: Book[];
-  onBookClick: (bookId: number) => void;
+  onBookClick: (bookId: string) => void;
 }
 
 export function ShelfNotes({ books, onBookClick }: ShelfNotesProps) {

@@ -15,7 +15,7 @@ export function LibraryPage() {
   const { openReader } = useAppStore();
 
   const loadBooks = useCallback(async () => {
-    const allBooks = await db.books.orderBy('addedAt').reverse().toArray();
+    const allBooks = await db.books.getAll();
     setBooks(allBooks);
   }, []);
 

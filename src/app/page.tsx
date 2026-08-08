@@ -46,7 +46,7 @@ export default function Dashboard() {
 
   // ── Data Loading ───────────────────────────────────
   const loadData = useCallback(async () => {
-    const allBooks = await db.books.orderBy('addedAt').reverse().toArray();
+    const allBooks = await db.books.getAll();
     setBooks(allBooks);
 
     // Find the currently-reading book (most recent)
@@ -178,21 +178,23 @@ export default function Dashboard() {
     }
   }, [closeUpload]);
 
-  const handleConfirmUpload = useCallback(
+    const handleConfirmUpload = useCallback(
     async (metadata: BookMetadata) => {
-      const book: Book = {
+      if (!pendingFileData) return;
+
+      const book: Omit<Book, 'id' | 'user_id'> = {
         ...metadata,
         currentPage: 0,
         completionPct: 0,
         status: 'reading',
         fileType: pendingFileType,
-        fileBlob: pendingFileData,
+        fileUrl: null,
         currentChapter: '',
         addedAt: Date.now(),
         completedAt: null,
       };
 
-      await db.books.add(book);
+      await db.books.add(book, pendingFileData);
 
       // Reset upload state
       setPendingMetadata(null);

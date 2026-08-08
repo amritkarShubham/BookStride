@@ -4,11 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface EpubViewerProps {
-  fileData: ArrayBuffer;
+  fileUrl: string;
   onPageChange: (location: string, progress: number, wordCount: number) => void;
 }
 
-export function EpubViewer({ fileData, onPageChange }: EpubViewerProps) {
+export function EpubViewer({ fileUrl, onPageChange }: EpubViewerProps) {
   const viewerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renditionRef = useRef<any>(null);
@@ -21,7 +21,7 @@ export function EpubViewer({ fileData, onPageChange }: EpubViewerProps) {
 
     async function loadEpub() {
       const ePub = (await import('epubjs')).default;
-      const book = ePub(fileData.slice(0));
+      const book = ePub(fileUrl);
       bookRef.current = book;
 
       if (!viewerRef.current || !mounted) return;
@@ -76,7 +76,7 @@ export function EpubViewer({ fileData, onPageChange }: EpubViewerProps) {
       bookRef.current?.destroy();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fileData]);
+  }, [fileUrl]);
 
   const prevPage = () => renditionRef.current?.prev();
   const nextPage = () => renditionRef.current?.next();

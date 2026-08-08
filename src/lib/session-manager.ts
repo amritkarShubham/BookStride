@@ -14,7 +14,7 @@ function getTodayDateStr(): string {
  * Create and persist a completed reading session.
  */
 export async function saveSession(
-  bookId: number,
+  bookId: string,
   wpmEngine: WpmEngine,
   startedAt: number
 ): Promise<ReadingSession> {
@@ -30,8 +30,7 @@ export async function saveSession(
     pagesRead: wpmEngine.getPagesRead(),
   };
 
-  const id = await db.sessions.add(session);
-  session.id = id;
+  await db.sessions.add(session);
 
   // Update daily log
   await updateDailyLog(session);
@@ -44,13 +43,13 @@ export async function saveSession(
  */
 async function updateDailyLog(session: ReadingSession): Promise<void> {
   const today = getTodayDateStr();
-  const existing = await db.dailyLogs.where('date').equals(today).first();
+  const allLogs = await db.dailyLogs.getAll();
+  const existing = allLogs.find((l) => l.date === today);
 
-  if (existing) {
-    await db.dailyLogs.update(existing.id!, {
+  if (existing && existing.id) {
+    await db.dailyLogs.update(existing.id, {
       totalSeconds: existing.totalSeconds + session.durationSeconds,
       totalWords: existing.totalWords + session.wordsRead,
-      sessionsCount: existing.sessionsCount + 1,
     });
   } else {
     const log: DailyLog = {
@@ -68,7 +67,7 @@ async function updateDailyLog(session: ReadingSession): Promise<void> {
  * Update book progress after a reading session.
  */
 export async function updateBookProgress(
-  bookId: number,
+  bookId: string,
   currentPage: number,
   totalPages: number
 ): Promise<void> {
@@ -107,13 +106,16 @@ export async function getWeeklyStats(): Promise<{
   let totalMinutes = 0;
   let totalWords = 0;
 
+  const allLogs = await db.dailyLogs.getAll();
+  const streakDays = await calculateStreak(allLogs);
+
   for (let i = 0; i < 7; i++) {
     const d = new Date(startOfWeek);
     d.setDate(startOfWeek.getDate() + i);
     const dateStr = d.toISOString().slice(0, 10);
     const isToday = dateStr === today.toISOString().slice(0, 10);
 
-    const log = await db.dailyLogs.where('date').equals(dateStr).first();
+    const log = allLogs.find((l) => l.date === dateStr);
     const minutes = log ? Math.round(log.totalSeconds / 60) : 0;
     const words = log ? log.totalWords : 0;
 
@@ -128,8 +130,7 @@ export async function getWeeklyStats(): Promise<{
     totalWords += words;
   }
 
-  // Calculate streak
-  const streakDays = await calculateStreak();
+  // calculateStreak called above
 
   return { days, totalMinutes, totalWords, streakDays };
 }
@@ -137,9 +138,9 @@ export async function getWeeklyStats(): Promise<{
 /**
  * Calculate the current reading streak (consecutive days with activity).
  */
-async function calculateStreak(): Promise<number> {
-  const logs = await db.dailyLogs.orderBy('date').reverse().toArray();
-  if (logs.length === 0) return 0;
+async function calculateStreak(logs: DailyLog[]): Promise<number> {
+  const sortedLogs = [...logs].sort((a, b) => b.date.localeCompare(a.date));
+  if (sortedLogs.length === 0) return 0;
 
   let streak = 0;
   const today = new Date();
@@ -150,7 +151,7 @@ async function calculateStreak(): Promise<number> {
     d.setDate(today.getDate() - i);
     const dateStr = d.toISOString().slice(0, 10);
 
-    const log = logs.find((l) => l.date === dateStr);
+    const log = sortedLogs.find((l) => l.date === dateStr);
     if (log && log.totalSeconds > 0) {
       streak++;
     } else if (i > 0) {
@@ -166,7 +167,7 @@ async function calculateStreak(): Promise<number> {
  * Get the user's best WPM record.
  */
 export async function getBestWpm(): Promise<number> {
-  const sessions = await db.sessions.toArray();
+  const sessions = await db.sessions.getAll();
   if (sessions.length === 0) return 0;
   return Math.max(...sessions.map((s) => s.avgWpm));
 }

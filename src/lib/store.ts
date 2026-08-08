@@ -11,7 +11,7 @@ interface AppState {
   userInitials: string;
 
   // Active reading session
-  activeBookId: number | null;
+  activeBookId: string | null;
   isSessionActive: boolean;
   sessionStartTime: number | null;
   sessionElapsedSeconds: number;
@@ -26,16 +26,16 @@ interface AppState {
   // Actions
   setUserName: (name: string) => void;
   setUserInitials: (initials: string) => void;
-  startSession: (bookId: number) => void;
+  startSession: (bookId: string) => void;
   pauseSession: () => void;
   resumeSession: () => void;
   endSession: () => void;
   updateSessionTime: (seconds: number) => void;
   addSessionWords: (words: number) => void;
-  setActiveBookId: (id: number | null) => void;
+  setActiveBookId: (id: string | null) => void;
   toggleSidebar: () => void;
   closeSidebar: () => void;
-  openReader: (bookId: number) => void;
+  openReader: (bookId: string) => void;
   closeReader: () => void;
   openUpload: () => void;
   closeUpload: () => void;
