@@ -1,69 +1,312 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useEffect, useState, useCallback } from 'react';
+import { Navbar } from '@/components/layout/navbar';
+import { GreetingBanner } from '@/components/dashboard/greeting-banner';
+import { NowReadingCard } from '@/components/dashboard/now-reading-card';
+import { WeeklyMomentum } from '@/components/dashboard/weekly-momentum';
+import { LittleWins } from '@/components/dashboard/little-wins';
+import { ShelfNotes } from '@/components/dashboard/shelf-notes';
+import { BookUploader } from '@/components/upload/book-uploader';
+import { MetadataReviewModal } from '@/components/upload/metadata-review-modal';
+import { ReaderModal } from '@/components/reader/reader-modal';
+import { db } from '@/lib/db';
+import { useAppStore } from '@/lib/store';
+import { getWeeklyStats, getBestWpm } from '@/lib/session-manager';
+import { extractPdfText, extractPdfMetadata } from '@/lib/pdf-extractor';
+import { extractEpubMetadata, extractEpubText } from '@/lib/epub-extractor';
+import { searchBookByTitleAuthor } from '@/lib/open-library';
+import type { Book, BookMetadata, WeeklyStats } from '@/lib/types';
+
+export default function Dashboard() {
+  // ── State ──────────────────────────────────────────
+  const [books, setBooks] = useState<Book[]>([]);
+  const [activeBook, setActiveBook] = useState<Book | null>(null);
+  const [weeklyStats, setWeeklyStats] = useState<WeeklyStats | null>(null);
+  const [bestWpm, setBestWpm] = useState(0);
+  const [totalSessions, setTotalSessions] = useState(0);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Upload flow
+  const [pendingMetadata, setPendingMetadata] = useState<BookMetadata | null>(null);
+  const [isExtractingMeta, setIsExtractingMeta] = useState(false);
+  const [pendingFileData, setPendingFileData] = useState<ArrayBuffer | null>(null);
+  const [pendingFileType, setPendingFileType] = useState<'pdf' | 'epub' | null>(null);
+
+  const {
+    isSessionActive,
+    sessionElapsedSeconds,
+    isReaderOpen,
+    activeBookId,
+    openReader,
+    closeReader,
+    closeUpload,
+    startSession,
+  } = useAppStore();
+
+  // ── Data Loading ───────────────────────────────────
+  const loadData = useCallback(async () => {
+    const allBooks = await db.books.orderBy('addedAt').reverse().toArray();
+    setBooks(allBooks);
+
+    // Find the currently-reading book (most recent)
+    const reading = allBooks.find((b) => b.status === 'reading');
+    setActiveBook(reading || null);
+
+    // Load stats
+    const stats = await getWeeklyStats();
+    setWeeklyStats(stats);
+
+    const wpm = await getBestWpm();
+    setBestWpm(wpm);
+
+    const sessions = await db.sessions.count();
+    setTotalSessions(sessions);
+
+    setIsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // ── Upload Flow ────────────────────────────────────
+  const handleFileSelected = useCallback(async (file: File) => {
+    closeUpload();
+    setIsExtractingMeta(true);
+    setPendingMetadata({
+      title: '',
+      author: '',
+      totalPages: 0,
+      description: '',
+      genres: [],
+      publishedYear: null,
+      coverUrl: '',
+      isbn: '',
+    });
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const isEpub = file.name.toLowerCase().endsWith('.epub');
+      const isPdf = file.name.toLowerCase().endsWith('.pdf');
+
+      setPendingFileData(arrayBuffer);
+      setPendingFileType(isEpub ? 'epub' : 'pdf');
+
+      let extractedMeta: Partial<BookMetadata> = {};
+      let textSnippet = '';
+
+      if (isPdf) {
+        // Extract PDF metadata and text
+        const [meta, textResult] = await Promise.all([
+          extractPdfMetadata(arrayBuffer),
+          extractPdfText(arrayBuffer, 3),
+        ]);
+        extractedMeta = meta;
+        textSnippet = textResult.text;
+        if (!extractedMeta.totalPages) {
+          extractedMeta.totalPages = textResult.totalPages;
+        }
+      } else if (isEpub) {
+        // Extract ePub metadata and text
+        const [meta, text] = await Promise.all([
+          extractEpubMetadata(arrayBuffer),
+          extractEpubText(arrayBuffer, 3),
+        ]);
+        extractedMeta = meta;
+        textSnippet = text;
+      }
+
+      // Try AI extraction via API route
+      let aiMeta: Partial<BookMetadata> = {};
+      try {
+        const res = await fetch('/api/extract-metadata', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            textSnippet: textSnippet.slice(0, 4000),
+            pdfMetadata: extractedMeta,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          aiMeta = data.metadata;
+        }
+      } catch {
+        // AI extraction failed — use local metadata
+      }
+
+      // Merge metadata (AI takes priority over raw extraction)
+      const title = aiMeta.title || extractedMeta.title || file.name.replace(/\.(pdf|epub)$/i, '');
+      const author = aiMeta.author || extractedMeta.author || '';
+
+      // Search Open Library for cover
+      let coverUrl = extractedMeta.coverUrl || '';
+      if (!coverUrl && title) {
+        const olResult = await searchBookByTitleAuthor(title, author);
+        if (olResult) {
+          coverUrl = olResult.coverUrl;
+        }
+      }
+
+      const finalMeta: BookMetadata = {
+        title,
+        author,
+        totalPages: aiMeta.totalPages || extractedMeta.totalPages || 0,
+        description: aiMeta.description || extractedMeta.description || '',
+        genres: aiMeta.genres || [],
+        publishedYear: aiMeta.publishedYear || null,
+        coverUrl,
+        isbn: '',
+      };
+
+      setPendingMetadata(finalMeta);
+    } catch (error) {
+      console.error('Metadata extraction error:', error);
+      setPendingMetadata({
+        title: file.name.replace(/\.(pdf|epub)$/i, ''),
+        author: '',
+        totalPages: 0,
+        description: '',
+        genres: [],
+        publishedYear: null,
+        coverUrl: '',
+        isbn: '',
+      });
+    } finally {
+      setIsExtractingMeta(false);
+    }
+  }, [closeUpload]);
+
+  const handleConfirmUpload = useCallback(
+    async (metadata: BookMetadata) => {
+      const book: Book = {
+        ...metadata,
+        currentPage: 0,
+        completionPct: 0,
+        status: 'reading',
+        fileType: pendingFileType,
+        fileBlob: pendingFileData,
+        currentChapter: '',
+        addedAt: Date.now(),
+        completedAt: null,
+      };
+
+      await db.books.add(book);
+
+      // Reset upload state
+      setPendingMetadata(null);
+      setPendingFileData(null);
+      setPendingFileType(null);
+
+      // Reload data
+      await loadData();
+    },
+    [pendingFileData, pendingFileType, loadData]
+  );
+
+  const handleCancelUpload = useCallback(() => {
+    setPendingMetadata(null);
+    setPendingFileData(null);
+    setPendingFileType(null);
+  }, []);
+
+  // ── Computed Values ────────────────────────────────
+  const completedBooks = books.filter((b) => b.status === 'completed').length;
+  const currentStreak = weeklyStats?.streakDays || 0;
+
+  const handleStartSession = useCallback(() => {
+    if (activeBook?.id) {
+      startSession(activeBook.id);
+      openReader(activeBook.id);
+    }
+  }, [activeBook, startSession, openReader]);
+
+  // ── Render ─────────────────────────────────────────
+  if (!isLoaded) {
+    return (
+      <>
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-8 h-8 rounded-full border-2 border-forest border-t-transparent animate-spin mx-auto mb-3" />
+            <p className="text-sm text-ink-light">Loading your library...</p>
+          </div>
+        </main>
+      </>
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+    <>
+      <Navbar />
+
+      <main className="flex-1">
+        <div className="max-w-6xl mx-auto px-5 py-8 space-y-8">
+          {/* Greeting */}
+          <GreetingBanner
+            totalBooksRead={completedBooks}
+            currentStreak={currentStreak}
+            onStartSession={handleStartSession}
+          />
+
+          {/* Now Reading */}
+          {activeBook && (
+            <NowReadingCard
+              book={activeBook}
+              sessionElapsed={sessionElapsedSeconds}
+              isSessionActive={isSessionActive}
+              onOpenReader={() => activeBook.id && openReader(activeBook.id)}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          )}
+
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="md:col-span-2">
+              {weeklyStats && (
+                <WeeklyMomentum
+                  days={weeklyStats.days}
+                  totalMinutes={weeklyStats.totalMinutes}
+                  totalWords={weeklyStats.totalWords}
+                  streakDays={weeklyStats.streakDays}
+                />
+              )}
+            </div>
+            <div>
+              <LittleWins
+                bestWpm={bestWpm}
+                totalBooksCompleted={completedBooks}
+                totalSessions={totalSessions}
+              />
+            </div>
+          </div>
+
+          {/* Shelf Notes */}
+          <ShelfNotes
+            books={books.slice(0, 8)}
+            onBookClick={(id) => openReader(id)}
+          />
         </div>
       </main>
-    </div>
+
+      {/* Upload Modal */}
+      <BookUploader onFileSelected={handleFileSelected} />
+
+      {/* Metadata Review */}
+      {pendingMetadata && (
+        <MetadataReviewModal
+          metadata={pendingMetadata}
+          isOpen={true}
+          isLoading={isExtractingMeta}
+          onConfirm={handleConfirmUpload}
+          onCancel={handleCancelUpload}
+        />
+      )}
+
+      {/* Reader Modal */}
+      {isReaderOpen && activeBookId && (
+        <ReaderModal bookId={activeBookId} onClose={closeReader} />
+      )}
+    </>
   );
 }
