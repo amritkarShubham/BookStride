@@ -122,6 +122,21 @@ export const db = {
     },
     async delete(id: string): Promise<void> {
       const supabase = createClient();
+      
+      // Get book to check for attached file
+      const { data: book } = await supabase.from('books').select('file_url').eq('id', id).single();
+      if (book && book.file_url) {
+        try {
+          const pathMatch = book.file_url.match(/\/books\/(.+)$/);
+          const path = pathMatch ? pathMatch[1] : null;
+          if (path) {
+            await supabase.storage.from('books').remove([path]);
+          }
+        } catch (e) {
+          console.error('Failed to delete book file from storage', e);
+        }
+      }
+
       const { error } = await supabase.from('books').delete().eq('id', id);
       if (error) throw error;
     }

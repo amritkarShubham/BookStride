@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { BookOpen, Plus, Search, Filter } from 'lucide-react';
+import { BookOpen, Plus, Search, Filter, Trash2 } from 'lucide-react';
 import { db } from '@/lib/db';
 import { useAppStore } from '@/lib/store';
 import type { Book, BookStatus } from '@/lib/types';
@@ -22,6 +22,16 @@ export function LibraryPage() {
   useEffect(() => {
     loadBooks();
   }, [loadBooks]);
+
+  const handleDeleteBook = async (e: React.MouseEvent, book: Book) => {
+    e.stopPropagation();
+    if (window.confirm(`Are you sure you want to permanently delete "${book.title}"?`)) {
+      if (book.id) {
+        await db.books.delete(book.id);
+        loadBooks();
+      }
+    }
+  };
 
   const filteredBooks = books.filter((b) => {
     const matchesFilter = filter === 'all' || b.status === filter;
@@ -104,7 +114,16 @@ export function LibraryPage() {
               onClick={() => book.id && openReader(book.id)}
               className="text-left group"
             >
-              <div className="book-spine w-full aspect-[2/3] rounded-xl overflow-hidden shadow-md group-hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1.5 mb-3">
+              <div className="book-spine relative w-full aspect-[2/3] rounded-xl overflow-hidden shadow-md group-hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1.5 mb-3">
+                {/* Delete Button */}
+                <div 
+                  onClick={(e) => handleDeleteBook(e, book)}
+                  className="absolute top-2 right-2 z-10 p-1.5 bg-black/60 backdrop-blur-sm hover:bg-terracotta text-cream rounded-md opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-sm"
+                  title="Delete book"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </div>
+
                 {book.coverUrl ? (
                   <img
                     src={book.coverUrl}
