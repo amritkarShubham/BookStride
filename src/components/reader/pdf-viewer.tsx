@@ -24,7 +24,7 @@ export function PdfViewer({ fileUrl, currentPage, onPageChange }: PdfViewerProps
 
     async function loadPdf() {
       const pdfjs = await import('pdfjs-dist');
-      pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+      pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
       const pdf = await pdfjs.getDocument({ url: fileUrl }).promise;
       if (cancelled) return;
