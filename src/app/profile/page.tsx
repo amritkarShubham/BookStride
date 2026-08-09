@@ -4,18 +4,41 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 import { Navbar } from '@/components/layout/navbar';
+import { createClient } from '@/lib/supabase/client';
+import { db } from '@/lib/db';
 
 export default function ProfileRedirect() {
   const router = useRouter();
-  const { userProfile } = useAppStore();
+  const { userProfile, setUserProfile } = useAppStore();
 
   useEffect(() => {
-    if (userProfile?.username) {
-      router.replace(`/profile/${userProfile.username}`);
-    } else {
+    const fetchAndRedirect = async () => {
+      if (userProfile?.username) {
+        router.replace(`/profile/${userProfile.username}`);
+        return;
+      }
+
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.auth.getUser();
+        if (data.user) {
+          const profile = await db.profiles.get(data.user.id);
+          if (profile) {
+            setUserProfile(profile);
+            router.replace(`/profile/${profile.username}`);
+            return;
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+      
+      // If all fails, go home
       router.replace('/');
-    }
-  }, [userProfile, router]);
+    };
+
+    fetchAndRedirect();
+  }, [userProfile, router, setUserProfile]);
 
   return (
     <>

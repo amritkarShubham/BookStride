@@ -263,6 +263,25 @@ export const db = {
         updatedAt: new Date(data.updated_at).getTime(),
       };
     },
+    async searchProfiles(query: string): Promise<Profile[]> {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
+        .limit(20);
+        
+      if (error) throw error;
+      return (data || []).map(d => ({
+        id: d.id,
+        username: d.username,
+        displayName: d.display_name,
+        avatarUrl: d.avatar_url,
+        bio: d.bio,
+        favoriteBooks: d.favorite_books || [],
+        updatedAt: new Date(d.updated_at).getTime(),
+      }));
+    },
     async update(userId: string, updates: Partial<Profile>): Promise<void> {
       const supabase = createClient();
       
