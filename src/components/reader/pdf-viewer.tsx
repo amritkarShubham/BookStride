@@ -49,10 +49,25 @@ export function PdfViewer({ fileUrl, currentPage, onPageChange }: PdfViewerProps
     const context = canvas.getContext('2d');
     if (!context) return;
 
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
+    const outputScale = window.devicePixelRatio || 1;
 
-    await pdfPage.render({ canvasContext: context, viewport }).promise;
+    canvas.width = Math.floor(viewport.width * outputScale);
+    canvas.height = Math.floor(viewport.height * outputScale);
+    canvas.style.width = Math.floor(viewport.width) + "px";
+    canvas.style.height =  Math.floor(viewport.height) + "px";
+
+    const transform = outputScale !== 1 
+      ? [outputScale, 0, 0, outputScale, 0, 0] 
+      : null;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const renderContext: any = {
+      canvasContext: context,
+      transform: transform,
+      viewport: viewport
+    };
+
+    await pdfPage.render(renderContext).promise;
 
     // Extract word count for WPM tracking
     const textContent = await pdfPage.getTextContent();
