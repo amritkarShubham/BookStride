@@ -446,17 +446,27 @@ export const db = {
         .from('books')
         .select('*, profiles(username, display_name, avatar_url)')
         .in('user_id', followingIds)
-        .order('addedAt', { ascending: false })
+        .order('added_at', { ascending: false })
         .limit(20);
         
       if (booksError) throw booksError;
       
-      // We can also fetch recent reading_sessions here if we want, but for now just books
-      // Map to a common event format
-      return (recentBooks || []).map(book => ({
+      // 3. Fetch recent reading sessions (longer than 5 minutes to prevent spam)
+      const { data: recentSessions, error: sessionsError } = await supabase
+        .from('reading_sessions')
+        .select('*, books(id, title, author, cover_url), profiles(username, display_name, avatar_url)')
+        .in('user_id', followingIds)
+        .gte('duration_seconds', 300) // At least 5 mins
+        .order('end_time', { ascending: false })
+        .limit(20);
+        
+      if (sessionsError) throw sessionsError;
+      
+      // Map books to event format
+      const bookEvents = (recentBooks || []).map(book => ({
         id: `book-${book.id}`,
         type: book.status === 'completed' ? 'completed_book' : 'started_book',
-        timestamp: book.completedAt || book.addedAt,
+        timestamp: book.completed_at ? new Date(book.completed_at).getTime() : new Date(book.added_at).getTime(),
         user: {
           username: book.profiles?.username,
           displayName: book.profiles?.display_name,
@@ -465,10 +475,144 @@ export const db = {
         book: {
           title: book.title,
           author: book.author,
-          coverUrl: book.coverUrl,
+          coverUrl: book.cover_url,
           id: book.id
         }
-      })).sort((a, b) => b.timestamp - a.timestamp);
+      }));
+      
+      // Map sessions to event format
+      const sessionEvents = (recentSessions || []).map(session => ({
+        id: `session-${session.id}`,
+        type: 'reading_update',
+        timestamp: new Date(session.end_time).getTime(),
+        durationSeconds: session.duration_seconds,
+        wordsRead: session.words_read,
+        user: {
+          username: session.profiles?.username,
+          displayName: session.profiles?.display_name,
+          avatarUrl: session.profiles?.avatar_url
+        },
+        book: {
+          title: session.books?.title,
+          author: session.books?.author,
+          coverUrl: session.books?.cover_url,
+          id: session.books?.id
+        }
+      }));
+      
+      // Combine and sort by timestamp descending
+      return [...bookEvents, ...sessionEvents]
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 30); // Return top 30 mixed events
+    },
+    async getFriendsReadingSameBook(userId: string, bookTitle: string): Promise<Profile[]> {
+      const supabase = createClient();
+      
+      // 1. Get following IDs
+      const { data: following, error: followingError } = await supabase
+        .from('followers')
+        .select('following_id')
+        .eq('follower_id', userId);
+        
+      if (followingError) throw followingError;
+      const followingIds = (following || []).map(f => f.following_id);
+      
+      if (followingIds.length === 0) return [];
+      
+      // 2. Query books table for those users where title matches and status is 'reading'
+      const { data: books, error: booksError } = await supabase
+        .from('books')
+        .select('user_id, profiles(*)')
+        .in('user_id', followingIds)
+        .ilike('title', bookTitle)
+        .eq('status', 'reading');
+        
+      if (booksError) throw booksError;
+      
+      // Map to profiles and filter duplicates
+      const profilesMap = new Map<string, Profile>();
+      
+      (books || []).forEach(b => {
+        if (b.profiles) {
+          const p = b.profiles as any;
+          profilesMap.set(b.user_id, {
+            id: p.id,
+            username: p.username,
+            displayName: p.display_name,
+            avatarUrl: p.avatar_url,
+            bio: p.bio,
+            favoriteBooks: p.favorite_books || [],
+            updatedAt: new Date(p.updated_at).getTime(),
+          });
+        }
+      });
+      
+      return Array.from(profilesMap.values());
+    },
+    async sendRecommendation(data: {
+      recommenderId: string;
+      receiverId: string;
+      bookId?: string;
+      bookTitle: string;
+      bookAuthor?: string;
+      coverUrl?: string;
+      message?: string;
+    }): Promise<void> {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('recommendations')
+        .insert({
+          recommender_id: data.recommenderId,
+          receiver_id: data.receiverId,
+          book_id: data.bookId,
+          book_title: data.bookTitle,
+          book_author: data.bookAuthor,
+          cover_url: data.coverUrl,
+          message: data.message
+        });
+      if (error) throw error;
+    },
+    async getRecommendations(userId: string): Promise<any[]> {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('recommendations')
+        .select(`
+          *,
+          recommender:profiles!recommendations_recommender_id_fkey(username, display_name, avatar_url)
+        `)
+        .eq('receiver_id', userId)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      return (data || []).map(r => {
+        const rec = r.recommender as any;
+        return {
+          id: r.id,
+          recommender: {
+            username: rec?.username,
+            displayName: rec?.display_name,
+            avatarUrl: rec?.avatar_url
+          },
+          book: {
+            id: r.book_id,
+            title: r.book_title,
+            author: r.book_author,
+            coverUrl: r.cover_url
+          },
+          message: r.message,
+          status: r.status,
+          createdAt: new Date(r.created_at).getTime()
+        };
+      });
+    },
+    async markRecommendationRead(recommendationId: string): Promise<void> {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('recommendations')
+        .update({ status: 'read' })
+        .eq('id', recommendationId);
+      if (error) throw error;
     }
   }
 };

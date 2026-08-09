@@ -6,12 +6,14 @@ import { db } from '@/lib/db';
 import { useAppStore } from '@/lib/store';
 import type { Book, BookStatus } from '@/lib/types';
 import { AddManualBook } from './add-manual-book';
+import { BookDetailsModal } from './book-details-modal';
 
 export function LibraryPage() {
   const [books, setBooks] = useState<Book[]>([]);
   const [filter, setFilter] = useState<BookStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [selectedDetailsBook, setSelectedDetailsBook] = useState<Book | null>(null);
   const { openReader } = useAppStore();
 
   const loadBooks = useCallback(async () => {
@@ -114,30 +116,39 @@ export function LibraryPage() {
               onClick={() => book.id && openReader(book.id)}
               className="text-left group"
             >
-              <div className="book-spine relative w-full aspect-[2/3] rounded-xl overflow-hidden shadow-md group-hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1.5 mb-3">
-                {/* Delete Button */}
-                <div 
-                  onClick={(e) => handleDeleteBook(e, book)}
-                  className="absolute top-2 right-2 z-10 p-1.5 bg-black/60 backdrop-blur-sm hover:bg-terracotta text-cream rounded-md opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-sm"
-                  title="Delete book"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </div>
-
-                {book.coverUrl ? (
-                  <img
-                    src={book.coverUrl}
-                    alt={book.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-forest flex items-center justify-center p-4">
-                    <span className="font-serif text-cream text-center text-sm leading-tight">
-                      {book.title}
-                    </span>
+                <div className="book-spine relative w-full aspect-[2/3] rounded-xl overflow-hidden shadow-md group-hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1.5 mb-3">
+                  {/* Delete Button */}
+                  <div 
+                    onClick={(e) => handleDeleteBook(e, book)}
+                    className="absolute top-2 right-2 z-20 p-1.5 bg-black/60 backdrop-blur-sm hover:bg-terracotta text-cream rounded-md opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-sm"
+                    title="Delete book"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
                   </div>
-                )}
-              </div>
+                  
+                  {/* Info Button */}
+                  <div 
+                    onClick={(e) => { e.stopPropagation(); setSelectedDetailsBook(book); }}
+                    className="absolute top-2 left-2 z-20 p-1.5 bg-black/60 backdrop-blur-sm hover:bg-forest text-cream rounded-md opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-sm"
+                    title="Book details"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                  </div>
+
+                  {book.coverUrl ? (
+                    <img
+                      src={book.coverUrl}
+                      alt={book.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-forest flex items-center justify-center p-4">
+                      <span className="font-serif text-cream text-center text-sm leading-tight">
+                        {book.title}
+                      </span>
+                    </div>
+                  )}
+                </div>
 
               {/* Progress */}
               <div className="progress-dual mb-2">
@@ -199,6 +210,14 @@ export function LibraryPage() {
           loadBooks();
         }}
       />
+      
+      {/* Book Details Modal */}
+      {selectedDetailsBook && (
+        <BookDetailsModal
+          book={selectedDetailsBook}
+          onClose={() => setSelectedDetailsBook(null)}
+        />
+      )}
     </div>
   );
 }

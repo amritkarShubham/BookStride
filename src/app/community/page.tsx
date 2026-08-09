@@ -77,7 +77,13 @@ export default function CommunityPage() {
                       {event.user.displayName || event.user.username}
                     </Link>
                     <span className="text-ink-light text-sm">
-                      {event.type === 'started_book' ? 'started reading' : 'finished reading'}
+                      {event.type === 'started_book' && 'started reading'}
+                      {event.type === 'completed_book' && 'finished reading'}
+                      {event.type === 'reading_update' && (
+                        event.wordsRead > 0 
+                          ? `read ${event.wordsRead.toLocaleString()} words of`
+                          : `read for ${Math.round(event.durationSeconds / 60)} minutes in`
+                      )}
                     </span>
                     <span className="text-ink-light text-xs sm:ml-auto">
                       {formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}
