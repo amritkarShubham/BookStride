@@ -82,8 +82,8 @@ export function LibraryPage() {
             placeholder="Search your library..."
           />
         </div>
-        <div className="flex items-center gap-1.5">
-          <Filter className="w-4 h-4 text-ink-light mr-1" />
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Filter className="w-4 h-4 text-ink-light mr-1 shrink-0" />
           {(
             [
               ['all', 'All'],

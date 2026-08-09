@@ -47,35 +47,35 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           <Link
             href="/explore"
-            className="flex items-center gap-1.5 text-sm text-ink-light hover:text-ink transition-colors px-3 py-2 rounded-lg hover:bg-beige/60"
+            className="hidden md:flex items-center gap-1.5 text-sm text-ink-light hover:text-ink transition-colors px-3 py-2 rounded-lg hover:bg-beige/60"
             aria-label="Search Friends"
           >
             <Search className="w-4 h-4" strokeWidth={1.6} />
-            <span className="hidden sm:inline">Explore</span>
+            <span>Explore</span>
           </Link>
 
           <Link
             href="/community"
-            className="flex items-center gap-1.5 text-sm text-ink-light hover:text-ink transition-colors px-3 py-2 rounded-lg hover:bg-beige/60"
+            className="hidden md:flex items-center gap-1.5 text-sm text-ink-light hover:text-ink transition-colors px-3 py-2 rounded-lg hover:bg-beige/60"
           >
             <Users className="w-4 h-4" strokeWidth={1.6} />
-            <span className="hidden sm:inline">Community</span>
+            <span>Community</span>
           </Link>
 
           <Link
             href="/inbox"
-            className="flex items-center gap-1.5 text-sm text-ink-light hover:text-ink transition-colors px-3 py-2 rounded-lg hover:bg-beige/60"
+            className="hidden md:flex items-center gap-1.5 text-sm text-ink-light hover:text-ink transition-colors px-3 py-2 rounded-lg hover:bg-beige/60"
           >
             <Inbox className="w-4 h-4" strokeWidth={1.6} />
-            <span className="hidden sm:inline">Inbox</span>
+            <span>Inbox</span>
           </Link>
 
           <Link
             href="/library"
-            className="flex items-center gap-1.5 text-sm text-ink-light hover:text-ink transition-colors px-3 py-2 rounded-lg hover:bg-beige/60"
+            className="hidden md:flex items-center gap-1.5 text-sm text-ink-light hover:text-ink transition-colors px-3 py-2 rounded-lg hover:bg-beige/60"
           >
             <Library className="w-4 h-4" strokeWidth={1.6} />
-            <span className="hidden sm:inline">Library</span>
+            <span>Library</span>
           </Link>
 
           <button

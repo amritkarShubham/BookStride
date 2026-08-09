@@ -10,6 +10,9 @@ import {
   Settings,
   BarChart3,
   Flame,
+  Search,
+  Users,
+  Inbox,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import Link from 'next/link';
@@ -45,6 +48,9 @@ export function Sidebar() {
   const navItems = [
     { href: '/', icon: Home, label: 'Dashboard', active: pathname === '/' },
     { href: '/library', icon: Library, label: 'My Library', active: pathname === '/library' },
+    { href: '/explore', icon: Search, label: 'Explore', active: pathname === '/explore' },
+    { href: '/community', icon: Users, label: 'Community', active: pathname === '/community' },
+    { href: '/inbox', icon: Inbox, label: 'Inbox', active: pathname === '/inbox' },
   ];
 
   return (
