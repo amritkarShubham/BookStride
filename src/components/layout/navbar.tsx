@@ -1,6 +1,6 @@
 'use client';
 
-import { BookOpen, Menu, Settings, Library } from 'lucide-react';
+import { BookOpen, Menu, Settings, Library, Users } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import Link from 'next/link';
 
@@ -45,6 +45,14 @@ export function Navbar() {
 
         {/* Right: Library + Settings + Avatar */}
         <div className="flex items-center gap-2">
+          <Link
+            href="/community"
+            className="flex items-center gap-1.5 text-sm text-ink-light hover:text-ink transition-colors px-3 py-2 rounded-lg hover:bg-beige/60"
+          >
+            <Users className="w-4 h-4" strokeWidth={1.6} />
+            <span className="hidden sm:inline">Community</span>
+          </Link>
+
           <Link
             href="/library"
             className="flex items-center gap-1.5 text-sm text-ink-light hover:text-ink transition-colors px-3 py-2 rounded-lg hover:bg-beige/60"

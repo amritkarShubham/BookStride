@@ -297,5 +297,129 @@ export const db = {
       const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
       return data.publicUrl;
     }
+  },
+  social: {
+    async followUser(followingId: string): Promise<void> {
+      const supabase = createClient();
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('followers')
+        .insert({
+          follower_id: userData.user.id,
+          following_id: followingId
+        });
+      if (error) throw error;
+    },
+    async unfollowUser(followingId: string): Promise<void> {
+      const supabase = createClient();
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('followers')
+        .delete()
+        .match({
+          follower_id: userData.user.id,
+          following_id: followingId
+        });
+      if (error) throw error;
+    },
+    async getFollowers(userId: string): Promise<Profile[]> {
+      const supabase = createClient();
+      // Need to join followers with profiles
+      const { data, error } = await supabase
+        .from('followers')
+        .select(`
+          follower:profiles!followers_follower_id_fkey(*)
+        `)
+        .eq('following_id', userId);
+      
+      if (error) throw error;
+      return (data || []).map((d: any) => ({
+        id: d.follower.id,
+        username: d.follower.username,
+        displayName: d.follower.display_name,
+        avatarUrl: d.follower.avatar_url,
+        bio: d.follower.bio,
+        favoriteBooks: d.follower.favorite_books || [],
+        updatedAt: new Date(d.follower.updated_at).getTime(),
+      }));
+    },
+    async getFollowing(userId: string): Promise<Profile[]> {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('followers')
+        .select(`
+          following:profiles!followers_following_id_fkey(*)
+        `)
+        .eq('follower_id', userId);
+      
+      if (error) throw error;
+      return (data || []).map((d: any) => ({
+        id: d.following.id,
+        username: d.following.username,
+        displayName: d.following.display_name,
+        avatarUrl: d.following.avatar_url,
+        bio: d.following.bio,
+        favoriteBooks: d.following.favorite_books || [],
+        updatedAt: new Date(d.following.updated_at).getTime(),
+      }));
+    },
+    async isFollowing(followerId: string, followingId: string): Promise<boolean> {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('followers')
+        .select('created_at')
+        .match({ follower_id: followerId, following_id: followingId })
+        .maybeSingle();
+      
+      if (error) throw error;
+      return !!data;
+    },
+    async getFeedEvents(userId: string): Promise<any[]> {
+      const supabase = createClient();
+      // 1. Get IDs of people the user is following
+      const { data: following, error: followingError } = await supabase
+        .from('followers')
+        .select('following_id')
+        .eq('follower_id', userId);
+        
+      if (followingError) throw followingError;
+      
+      const followingIds = (following || []).map(f => f.following_id);
+      
+      if (followingIds.length === 0) return [];
+      
+      // 2. Fetch recent books from these users
+      const { data: recentBooks, error: booksError } = await supabase
+        .from('books')
+        .select('*, profiles(username, display_name, avatar_url)')
+        .in('user_id', followingIds)
+        .order('addedAt', { ascending: false })
+        .limit(20);
+        
+      if (booksError) throw booksError;
+      
+      // We can also fetch recent reading_sessions here if we want, but for now just books
+      // Map to a common event format
+      return (recentBooks || []).map(book => ({
+        id: `book-${book.id}`,
+        type: book.status === 'completed' ? 'completed_book' : 'started_book',
+        timestamp: book.completedAt || book.addedAt,
+        user: {
+          username: book.profiles?.username,
+          displayName: book.profiles?.display_name,
+          avatarUrl: book.profiles?.avatar_url
+        },
+        book: {
+          title: book.title,
+          author: book.author,
+          coverUrl: book.coverUrl,
+          id: book.id
+        }
+      })).sort((a, b) => b.timestamp - a.timestamp);
+    }
   }
 };
