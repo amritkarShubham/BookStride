@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Navbar } from '@/components/layout/navbar';
 import { GreetingBanner } from '@/components/dashboard/greeting-banner';
 import { NowReadingCard } from '@/components/dashboard/now-reading-card';
@@ -69,6 +69,15 @@ export default function Dashboard() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Reload data when reader closes so progress updates reflect immediately
+  const prevIsReaderOpen = useRef(isReaderOpen);
+  useEffect(() => {
+    if (prevIsReaderOpen.current && !isReaderOpen) {
+      loadData();
+    }
+    prevIsReaderOpen.current = isReaderOpen;
+  }, [isReaderOpen, loadData]);
 
   // ── Upload Flow ────────────────────────────────────
   const handleFileSelected = useCallback(async (file: File) => {
