@@ -42,6 +42,7 @@ export default function Dashboard() {
     closeReader,
     closeUpload,
     startSession,
+    refreshTrigger,
   } = useAppStore();
 
   // ── Data Loading ───────────────────────────────────
@@ -85,7 +86,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, [loadData, refreshTrigger]);
 
   // Reload data when reader closes so progress updates reflect immediately
   const prevIsReaderOpen = useRef(isReaderOpen);

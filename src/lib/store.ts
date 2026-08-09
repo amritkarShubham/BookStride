@@ -24,6 +24,7 @@ interface AppState {
   isReaderOpen: boolean;
   isUploadOpen: boolean;
   isSettingsOpen: boolean;
+  refreshTrigger: number;
 
   // Actions
   setUserName: (name: string) => void;
@@ -44,6 +45,7 @@ interface AppState {
   closeUpload: () => void;
   openSettings: () => void;
   closeSettings: () => void;
+  triggerRefresh: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -62,6 +64,7 @@ export const useAppStore = create<AppState>()(
       isReaderOpen: false,
       isUploadOpen: false,
       isSettingsOpen: false,
+      refreshTrigger: 0,
 
       // Actions
       setUserName: (name) => {
@@ -124,6 +127,8 @@ export const useAppStore = create<AppState>()(
       closeUpload: () => set({ isUploadOpen: false }),
       openSettings: () => set({ isSettingsOpen: true }),
       closeSettings: () => set({ isSettingsOpen: false }),
+
+      triggerRefresh: () => set((state) => ({ refreshTrigger: state.refreshTrigger + 1 })),
     }),
     {
       name: 'bookstride-store',

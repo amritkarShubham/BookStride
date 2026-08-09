@@ -14,7 +14,7 @@ export function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedDetailsBook, setSelectedDetailsBook] = useState<Book | null>(null);
-  const { openReader } = useAppStore();
+  const { openReader, refreshTrigger } = useAppStore();
 
   const loadBooks = useCallback(async () => {
     const allBooks = await db.books.getAll();
@@ -23,7 +23,7 @@ export function LibraryPage() {
 
   useEffect(() => {
     loadBooks();
-  }, [loadBooks]);
+  }, [loadBooks, refreshTrigger]);
 
   const handleDeleteBook = async (e: React.MouseEvent, book: Book) => {
     e.stopPropagation();

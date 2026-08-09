@@ -46,7 +46,7 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionStartRef = useRef(Date.now());
 
-  const { startSession, endSession, updateSessionTime } = useAppStore();
+  const { startSession, endSession, updateSessionTime, triggerRefresh } = useAppStore();
 
   // Load book data
   useEffect(() => {
@@ -115,6 +115,20 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
     [book]
   );
 
+  // Debounced auto-save progress
+  useEffect(() => {
+    if (book?.id && progress > 0) {
+      const timeout = setTimeout(() => {
+        const totalPages = book.totalPages || 0;
+        let currentPage = Math.round((progress / 100) * totalPages);
+        if (isNaN(currentPage)) currentPage = book.currentPage || 0;
+        updateBookProgress(book.id, currentPage, totalPages, progress).catch(console.error);
+        triggerRefresh();
+      }, 1500);
+      return () => clearTimeout(timeout);
+    }
+  }, [progress, book, triggerRefresh]);
+
   // Handle close — save session
   const handleClose = async () => {
     try {
@@ -135,6 +149,7 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
       console.error('Error saving reading session:', error);
     } finally {
       endSession();
+      triggerRefresh();
       onClose();
     }
   };
