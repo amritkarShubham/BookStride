@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
@@ -22,6 +22,10 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  themeColor: "#1A4731",
+};
+
 export const metadata: Metadata = {
   title: "Bookstride — Track Your Reading Journey",
   description:
@@ -41,6 +45,7 @@ export const metadata: Metadata = {
     description: "Your personal Strava for Books. Track WPM, build streaks, and own your reading data.",
     type: "website",
   },
+  manifest: "/manifest.json",
 };
 
 import { Sidebar } from "@/components/layout/sidebar";

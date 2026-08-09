@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import React from 'react'
 import { BookOpen } from 'lucide-react'
 import { login, signup } from './actions'
 import { OAuthButtons } from './oauth-buttons'
@@ -6,8 +7,11 @@ import { OAuthButtons } from './oauth-buttons'
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { message: string }
+  searchParams: Promise<{ message: string }>
 }) {
+  const params = React.use(searchParams);
+  const message = params.message;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-cream px-5">
       <div className="w-full max-w-sm animate-fade-in-up">
@@ -51,9 +55,9 @@ export default function LoginPage({
               />
             </div>
 
-            {searchParams?.message && (
+            {message && (
               <p className="text-sm text-terracotta bg-terracotta/5 p-3 rounded-xl border border-terracotta/20 text-center">
-                {searchParams.message}
+                {message}
               </p>
             )}
 
