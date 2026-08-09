@@ -4,11 +4,13 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { Profile } from './types';
 
 interface AppState {
   // User profile
   userName: string;
   userInitials: string;
+  userProfile: Profile | null;
 
   // Active reading session
   activeBookId: string | null;
@@ -26,6 +28,7 @@ interface AppState {
   // Actions
   setUserName: (name: string) => void;
   setUserInitials: (initials: string) => void;
+  setUserProfile: (profile: Profile | null) => void;
   startSession: (bookId: string) => void;
   pauseSession: () => void;
   resumeSession: () => void;
@@ -49,6 +52,7 @@ export const useAppStore = create<AppState>()(
       // Defaults
       userName: 'Reader',
       userInitials: 'RE',
+      userProfile: null,
       activeBookId: null,
       isSessionActive: false,
       sessionStartTime: null,
@@ -71,6 +75,21 @@ export const useAppStore = create<AppState>()(
         set({ userName: name, userInitials: initials });
       },
       setUserInitials: (initials) => set({ userInitials: initials }),
+      setUserProfile: (profile) => {
+        if (profile) {
+          const name = profile.displayName || profile.username;
+          const initials = name
+            .split(' ')
+            .filter((w) => w.length > 0)
+            .map((w) => w[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2) || 'RE';
+          set({ userProfile: profile, userName: name, userInitials: initials });
+        } else {
+          set({ userProfile: null });
+        }
+      },
 
       startSession: (bookId) =>
         set({

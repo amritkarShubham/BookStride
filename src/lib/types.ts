@@ -5,6 +5,16 @@
 export type BookStatus = 'reading' | 'completed' | 'want-to-read';
 export type FileType = 'pdf' | 'epub';
 
+export interface Profile {
+  id: string; // matches auth.users.id
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
+  favoriteBooks: string[]; // UUIDs of books
+  updatedAt: number;
+}
+
 export interface Book {
   id?: string;
   user_id?: string;

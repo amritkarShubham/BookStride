@@ -1,5 +1,5 @@
 import { createClient } from './supabase/client';
-import type { Book, ReadingSession, DailyLog } from './types';
+import type { Book, ReadingSession, DailyLog, Profile } from './types';
 
 export const db = {
   books: {
@@ -222,6 +222,80 @@ export const db = {
         total_words: updates.totalWords,
       }).eq('id', id);
       if (error) throw error;
+    }
+  },
+  profiles: {
+    async get(userId: string): Promise<Profile | null> {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      if (!data) return null;
+      return {
+        id: data.id,
+        username: data.username,
+        displayName: data.display_name,
+        avatarUrl: data.avatar_url,
+        bio: data.bio,
+        favoriteBooks: data.favorite_books || [],
+        updatedAt: new Date(data.updated_at).getTime(),
+      };
+    },
+    async getByUsername(username: string): Promise<Profile | null> {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('username', username)
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      if (!data) return null;
+      return {
+        id: data.id,
+        username: data.username,
+        displayName: data.display_name,
+        avatarUrl: data.avatar_url,
+        bio: data.bio,
+        favoriteBooks: data.favorite_books || [],
+        updatedAt: new Date(data.updated_at).getTime(),
+      };
+    },
+    async update(userId: string, updates: Partial<Profile>): Promise<void> {
+      const supabase = createClient();
+      
+      const payload: any = {};
+      if (updates.username !== undefined) payload.username = updates.username;
+      if (updates.displayName !== undefined) payload.display_name = updates.displayName;
+      if (updates.avatarUrl !== undefined) payload.avatar_url = updates.avatarUrl;
+      if (updates.bio !== undefined) payload.bio = updates.bio;
+      if (updates.favoriteBooks !== undefined) payload.favorite_books = updates.favoriteBooks;
+      
+      if (Object.keys(payload).length === 0) return;
+      
+      payload.updated_at = new Date().toISOString();
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(payload)
+        .eq('id', userId);
+      if (error) throw error;
+    },
+    async uploadAvatar(userId: string, file: File): Promise<string> {
+      const supabase = createClient();
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+      return data.publicUrl;
     }
   }
 };

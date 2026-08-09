@@ -5,7 +5,7 @@ import { useAppStore } from '@/lib/store';
 import Link from 'next/link';
 
 export function Navbar() {
-  const { userInitials, toggleSidebar, openSettings } = useAppStore();
+  const { userInitials, userProfile, toggleSidebar, openSettings } = useAppStore();
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-beige-border/40"
@@ -61,10 +61,16 @@ export function Navbar() {
             <Settings className="w-[18px] h-[18px] text-ink-light" strokeWidth={1.6} />
           </button>
 
-          {/* User avatar — styled like a wax seal */}
-          <div className="w-9 h-9 rounded-full bg-forest text-cream flex items-center justify-center text-[11px] font-semibold tracking-wide shadow-sm ring-2 ring-forest/10">
-            {userInitials}
-          </div>
+          {/* User avatar */}
+          <Link href="/profile" className="block relative group ml-2">
+            <div className="w-9 h-9 rounded-full bg-forest text-cream flex items-center justify-center text-[11px] font-semibold tracking-wide shadow-sm ring-2 ring-forest/10 overflow-hidden group-hover:ring-forest/30 transition-all">
+              {userProfile?.avatarUrl ? (
+                <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                userInitials
+              )}
+            </div>
+          </Link>
         </div>
       </div>
 
