@@ -118,11 +118,12 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
   // Debounced auto-save progress
   useEffect(() => {
     if (book?.id && progress > 0) {
+      const currentBookId = book.id;
       const timeout = setTimeout(() => {
         const totalPages = book.totalPages || 0;
         let currentPage = Math.round((progress / 100) * totalPages);
         if (isNaN(currentPage)) currentPage = book.currentPage || 0;
-        updateBookProgress(book.id, currentPage, totalPages, progress).catch(console.error);
+        updateBookProgress(currentBookId, currentPage, totalPages, progress).catch(console.error);
         triggerRefresh();
       }, 1500);
       return () => clearTimeout(timeout);
@@ -136,14 +137,15 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
       engine.endCurrentPage();
 
       if (book?.id) {
-        await saveSession(book.id, engine, sessionStartRef.current);
+        const currentBookId = book.id;
+        await saveSession(currentBookId, engine, sessionStartRef.current);
 
         // Update book progress
         const totalPages = book.totalPages || 0;
         let currentPage = Math.round((progress / 100) * totalPages);
         if (isNaN(currentPage)) currentPage = book.currentPage || 0;
         
-        await updateBookProgress(book.id, currentPage, totalPages, progress);
+        await updateBookProgress(currentBookId, currentPage, totalPages, progress);
       }
     } catch (error) {
       console.error('Error saving reading session:', error);
