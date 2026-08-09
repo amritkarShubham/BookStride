@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/navbar';
 import { createClient } from '@/lib/supabase/client';
 import { db } from '@/lib/db';
@@ -10,7 +10,10 @@ import type { Profile, Book } from '@/lib/types';
 import { Edit2, BookOpen, UserPlus, UserMinus, Users } from 'lucide-react';
 import { EditProfileModal } from '@/components/profile/edit-profile-modal';
 
-export default function ProfilePage({ params }: { params: { username: string } }) {
+export default function ProfilePage() {
+  const params = useParams();
+  const username = params?.username as string;
+  
   const [profile, setProfile] = useState<Profile | null>(null);
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,7 +37,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
       const currentUserId = userData.user?.id;
       
       // Load the profile we're looking at
-      const viewedProfile = await db.profiles.getByUsername(params.username);
+      const viewedProfile = await db.profiles.getByUsername(username);
       
       if (!viewedProfile) {
         setProfile(null);
@@ -81,8 +84,10 @@ export default function ProfilePage({ params }: { params: { username: string } }
   };
 
   useEffect(() => {
-    loadData();
-  }, [params.username]);
+    if (username) {
+      loadData();
+    }
+  }, [username]);
 
   const handleFollowToggle = async () => {
     if (!profile) return;
@@ -118,7 +123,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
       <Navbar />
       <main className="max-w-xl mx-auto px-5 py-20 text-center">
         <h1 className="text-2xl font-serif text-ink mb-4">Profile Not Found</h1>
-        <p className="text-ink-light mb-8">The user @{params.username} does not exist.</p>
+        <p className="text-ink-light mb-8">The user @{username} does not exist.</p>
         <button onClick={() => router.push('/')} className="px-6 py-2 bg-forest text-cream rounded-xl">Go Home</button>
       </main>
     </>
