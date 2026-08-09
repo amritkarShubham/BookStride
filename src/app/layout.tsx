@@ -45,7 +45,14 @@ export const metadata: Metadata = {
     description: "Your personal Strava for Books. Track WPM, build streaks, and own your reading data.",
     type: "website",
   },
-  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "Bookstride",
+    statusBarStyle: "default",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 import { Sidebar } from "@/components/layout/sidebar";
