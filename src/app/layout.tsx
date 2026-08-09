@@ -53,6 +53,7 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  manifest: "/manifest.json",
 };
 
 import { Sidebar } from "@/components/layout/sidebar";
@@ -64,6 +65,26 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${inter.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').then(
+                    function(registration) {
+                      console.log('ServiceWorker registration successful');
+                    },
+                    function(err) {
+                      console.log('ServiceWorker registration failed: ', err);
+                    }
+                  );
+                });
+              }
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-cream text-ink">
         <TooltipProvider>
           {children}
