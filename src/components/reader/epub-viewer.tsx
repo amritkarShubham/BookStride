@@ -5,10 +5,11 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface EpubViewerProps {
   fileUrl: string;
+  initialLocation?: string;
   onPageChange: (location: string, progress: number, wordCount: number) => void;
 }
 
-export function EpubViewer({ fileUrl, onPageChange }: EpubViewerProps) {
+export function EpubViewer({ fileUrl, initialLocation, onPageChange }: EpubViewerProps) {
   const viewerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renditionRef = useRef<any>(null);
@@ -49,7 +50,11 @@ export function EpubViewer({ fileUrl, onPageChange }: EpubViewerProps) {
         },
       });
 
-      await rendition.display();
+      if (initialLocation) {
+        await rendition.display(initialLocation);
+      } else {
+        await rendition.display();
+      }
       setIsLoading(false);
 
       // Track location changes

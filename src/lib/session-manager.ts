@@ -70,7 +70,8 @@ export async function updateBookProgress(
   bookId: string,
   currentPage: number,
   totalPages: number,
-  explicitPct?: number
+  explicitPct?: number,
+  currentChapter?: string
 ): Promise<void> {
   const pct = explicitPct !== undefined
     ? explicitPct
@@ -81,6 +82,7 @@ export async function updateBookProgress(
     completionPct: pct,
     status: pct >= 100 ? 'completed' : 'reading',
     ...(pct >= 100 ? { completedAt: Date.now() } : {}),
+    ...(currentChapter ? { currentChapter } : {}),
   });
 }
 

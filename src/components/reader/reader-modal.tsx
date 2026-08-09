@@ -45,6 +45,8 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
   const wpmEngineRef = useRef(new WpmEngine());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionStartRef = useRef(Date.now());
+  const precisePageRef = useRef<number | null>(null);
+  const preciseLocationRef = useRef<string | null>(null);
 
   const { startSession, endSession, updateSessionTime, triggerRefresh } = useAppStore();
 
@@ -106,6 +108,12 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
       setCurrentWpm(engine.getAverageWpm() || engine.getLiveWpm());
 
       if (book) {
+        if (typeof pageOrLocation === 'number') {
+          precisePageRef.current = pageOrLocation;
+        } else if (typeof pageOrLocation === 'string') {
+          preciseLocationRef.current = pageOrLocation;
+        }
+
         const newProgress = typeof pageOrLocation === 'number'
           ? parseFloat(((pageOrLocation / totalOrProgress) * 100).toFixed(1))
           : totalOrProgress;
@@ -121,9 +129,14 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
       const currentBookId = book.id;
       const timeout = setTimeout(() => {
         const totalPages = book.totalPages || 0;
-        let currentPage = Math.round((progress / 100) * totalPages);
+        let currentPage = precisePageRef.current;
+        if (currentPage === null) {
+          currentPage = Math.round((progress / 100) * totalPages);
+        }
         if (isNaN(currentPage)) currentPage = book.currentPage || 0;
-        updateBookProgress(currentBookId, currentPage, totalPages, progress).catch(console.error);
+        
+        const currentLoc = preciseLocationRef.current || undefined;
+        updateBookProgress(currentBookId, currentPage, totalPages, progress, currentLoc).catch(console.error);
         triggerRefresh();
       }, 1500);
       return () => clearTimeout(timeout);
@@ -142,10 +155,14 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
 
         // Update book progress
         const totalPages = book.totalPages || 0;
-        let currentPage = Math.round((progress / 100) * totalPages);
+        let currentPage = precisePageRef.current;
+        if (currentPage === null) {
+          currentPage = Math.round((progress / 100) * totalPages);
+        }
         if (isNaN(currentPage)) currentPage = book.currentPage || 0;
         
-        await updateBookProgress(currentBookId, currentPage, totalPages, progress);
+        const currentLoc = preciseLocationRef.current || undefined;
+        await updateBookProgress(currentBookId, currentPage, totalPages, progress, currentLoc);
       }
     } catch (error) {
       console.error('Error saving reading session:', error);
@@ -278,7 +295,8 @@ export function ReaderModal({ bookId, onClose }: ReaderModalProps) {
             />
           ) : (
             <EpubViewer
-              fileUrl={signedUrl}
+              fileUrl={signedUrl!}
+              initialLocation={book.currentChapter || undefined}
               onPageChange={handlePageChange}
             />
           )
