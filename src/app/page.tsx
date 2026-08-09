@@ -49,9 +49,26 @@ export default function Dashboard() {
     const allBooks = await db.books.getAll();
     setBooks(allBooks);
 
-    // Find the currently-reading book (most recent)
-    const reading = allBooks.find((b) => b.status === 'reading');
-    setActiveBook(reading || null);
+    // Find the currently-reading book
+    let reading = null;
+    try {
+      const allSessions = await db.sessions.getAll();
+      for (const session of allSessions) {
+        const book = allBooks.find(b => b.id === session.bookId && b.status === 'reading');
+        if (book) {
+          reading = book;
+          break;
+        }
+      }
+    } catch (e) {
+      // Ignore
+    }
+    
+    if (!reading) {
+      reading = allBooks.find((b) => b.status === 'reading') || null;
+    }
+
+    setActiveBook(reading);
 
     // Load stats
     const stats = await getWeeklyStats();
