@@ -3,6 +3,36 @@ import type { Book, ReadingSession, DailyLog, Profile } from './types';
 
 export const db = {
   books: {
+    async getByUserId(userId: string): Promise<Book[]> {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('books')
+        .select('*')
+        .eq('user_id', userId)
+        .order('added_at', { ascending: false });
+
+      if (error) throw error;
+      return (data || []).map(d => ({
+        id: d.id,
+        user_id: d.user_id,
+        title: d.title,
+        author: d.author,
+        coverUrl: d.cover_url,
+        totalPages: d.total_pages,
+        currentPage: d.current_page,
+        completionPct: d.completion_pct,
+        status: d.status,
+        fileType: d.file_type,
+        fileUrl: d.file_url,
+        description: d.description,
+        genres: d.genres || [],
+        publishedYear: d.published_year,
+        isbn: d.isbn,
+        currentChapter: d.current_chapter,
+        addedAt: new Date(d.added_at).getTime(),
+        completedAt: d.completed_at ? new Date(d.completed_at).getTime() : null,
+      }));
+    },
     async getAll(): Promise<Book[]> {
       const supabase = createClient();
       const { data, error } = await supabase

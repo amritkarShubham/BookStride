@@ -62,13 +62,8 @@ export default function ProfilePage() {
       // Let's assume we can fetch books for this user if RLS allows it.
       // Wait: db.books.getAll() doesn't take a userId parameter right now, and relies on auth.uid()
       // I need to fetch books by userId. Let's add that to db.ts later, but for now we'll do it via supabase client here
-      const { data: userBooks } = await supabase
-        .from('books')
-        .select('*')
-        .eq('user_id', viewedProfile.id)
-        .order('addedAt', { ascending: false });
-        
-      setBooks((userBooks as Book[]) || []);
+      const userBooks = await db.books.getByUserId(viewedProfile.id);
+      setBooks(userBooks);
       
       // Load social stats
       const followers = await db.social.getFollowers(viewedProfile.id);
