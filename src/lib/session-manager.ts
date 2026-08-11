@@ -6,8 +6,14 @@ import { db } from './db';
 import type { ReadingSession, DailyLog } from './types';
 import { WpmEngine } from './wpm-engine';
 
-function getTodayDateStr(): string {
-  return new Date().toISOString().slice(0, 10);
+/**
+ * Get today's date as YYYY-MM-DD in the user's local timezone (not UTC).
+ */
+function getLocalDateStr(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -42,7 +48,7 @@ export async function saveSession(
  * Update or create the daily log entry for today.
  */
 async function updateDailyLog(session: ReadingSession): Promise<void> {
-  const today = getTodayDateStr();
+  const today = getLocalDateStr();
   const allLogs = await db.dailyLogs.getAll();
   const existing = allLogs.find((l) => l.date === today);
 
@@ -115,8 +121,8 @@ export async function getWeeklyStats(): Promise<{
   for (let i = 0; i < 7; i++) {
     const d = new Date(startOfWeek);
     d.setDate(startOfWeek.getDate() + i);
-    const dateStr = d.toISOString().slice(0, 10);
-    const isToday = dateStr === today.toISOString().slice(0, 10);
+    const dateStr = getLocalDateStr(d);
+    const isToday = dateStr === getLocalDateStr(today);
 
     const log = allLogs.find((l) => l.date === dateStr);
     const minutes = log ? Math.round(log.totalSeconds / 60) : 0;
@@ -152,7 +158,7 @@ async function calculateStreak(logs: DailyLog[]): Promise<number> {
   for (let i = 0; i < 365; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
-    const dateStr = d.toISOString().slice(0, 10);
+    const dateStr = getLocalDateStr(d);
 
     const log = sortedLogs.find((l) => l.date === dateStr);
     if (log && log.totalSeconds > 0) {

@@ -22,6 +22,11 @@ export class WpmEngine {
    * Call when a user lands on a new page.
    */
   startPage(pageNum: number, wordCount: number): void {
+    // Guard: don't re-start the same page (prevents double-counting from re-renders)
+    if (this.currentPageNum === pageNum && this.currentPageStart !== null) {
+      return;
+    }
+
     // Record previous page reading if it exists
     if (this.currentPageStart !== null) {
       this.endCurrentPage();

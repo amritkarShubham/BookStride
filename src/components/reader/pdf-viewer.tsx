@@ -38,7 +38,9 @@ export function PdfViewer({ fileUrl, currentPage, onPageChange }: PdfViewerProps
     return () => { cancelled = true; };
   }, [fileUrl]);
 
-  // Render current page
+  const lastReportedPageRef = useRef<number | null>(null);
+
+  // Render current page (visual only — no page-change reporting)
   const renderPage = useCallback(async (pageNum: number) => {
     const pdf = pdfDocRef.current;
     if (!pdf || !canvasRef.current) return;
@@ -69,13 +71,18 @@ export function PdfViewer({ fileUrl, currentPage, onPageChange }: PdfViewerProps
 
     await pdfPage.render(renderContext).promise;
 
-    // Extract word count for WPM tracking
-    const textContent = await pdfPage.getTextContent();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const text = textContent.items.map((item: any) => item.str || '').join(' ');
-    const wordCount = text.split(/\s+/).filter((w: string) => w.length > 0).length;
+    // Only report page change when the page number actually changes
+    // (not on zoom/scale changes which also re-render)
+    if (lastReportedPageRef.current !== pageNum) {
+      lastReportedPageRef.current = pageNum;
 
-    onPageChange(pageNum, pdf.numPages, wordCount);
+      const textContent = await pdfPage.getTextContent();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = textContent.items.map((item: any) => item.str || '').join(' ');
+      const wordCount = text.split(/\s+/).filter((w: string) => w.length > 0).length;
+
+      onPageChange(pageNum, pdf.numPages, wordCount);
+    }
   }, [scale, onPageChange]);
 
   useEffect(() => {
